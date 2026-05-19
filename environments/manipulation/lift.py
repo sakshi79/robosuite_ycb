@@ -9,6 +9,23 @@ from robosuite.environments.manipulation.single_arm_env import SingleArmEnv
 from robosuite.models.arenas import TableArena
 from robosuite.models.objects import BoxObject
 from robosuite.models.objects import CylinderObject, CapsuleObject, BallObject
+from robosuite.models.objects import (
+    BottleObject,
+    CanObject,
+    LemonObject,
+    MilkObject,
+    BreadObject,
+    CerealObject,
+)
+
+# Optional YCB integration. Only available in envs where the
+# `ycb_assets` package (at /media/saks/disk8TB/ycb_assets/) has been installed
+# via `pip install -e`. Leaves YCBObject as None otherwise so this file still
+# imports cleanly in envs without YCB.
+try:
+    from ycb_assets import YCBObject
+except ImportError:
+    YCBObject = None
 from robosuite.models.tasks import ManipulationTask
 from robosuite.utils.placement_samplers import UniformRandomSampler
 from robosuite.utils.observables import Observable, sensor
@@ -299,13 +316,66 @@ class Lift(SingleArmEnv):
         #     rgba=[1, 0, 0, 1],
         #     material=redwood,
         # )
-        self.cube = BallObject(
-            name="cube",
-            size_min=[0.020],   # [radius]
-            size_max=[0.022],
-            rgba=[1, 0, 0, 1],
-            material=redwood,
-        )
+        # self.cube = BallObject(
+        #     name="cube",
+        #     size_min=[0.020],   # [radius]
+        #     size_max=[0.022],
+        #     rgba=[1, 0, 0, 1],
+        #     material=redwood,
+        # )
+
+        # ---- XML-based objects (mesh assets in robosuite/models/assets/objects) ----
+        # XML objects do not accept size/rgba/material — geometry and textures come from the XML file.
+        # self.cube = BottleObject(name="cube")
+        # self.cube = CanObject(name="cube")
+        # self.cube = LemonObject(name="cube")
+        # self.cube = MilkObject(name="cube")
+        # self.cube = BreadObject(name="cube")
+        # self.cube = CerealObject(name="cube")
+
+        # ---- YCB objects (Google-16k mesh + coacd convex decomposition) ----
+        # Requires `pip install -e /media/saks/disk8TB/ycb_assets` in the active env.
+        # Use ycb_assets.list_ycb_objects() to see what's installed locally.
+        # self.cube = YCBObject(name="cube", ycb_id="002_master_chef_can")
+        self.cube = YCBObject(name="cube", ycb_id="003_cracker_box")
+        # self.cube = YCBObject(name="cube", ycb_id="004_sugar_box")
+        # self.cube = YCBObject(name="cube", ycb_id="006_mustard_bottle")
+        # self.cube = YCBObject(name="cube", ycb_id="007_tuna_fish_can")
+        # self.cube = YCBObject(name="cube", ycb_id="008_pudding_box")
+        # self.cube = YCBObject(name="cube", ycb_id="009_gelatin_box")
+        # self.cube = YCBObject(name="cube", ycb_id="010_potted_meat_can")
+        # self.cube = YCBObject(name="cube", ycb_id="011_banana")
+        # self.cube = YCBObject(name="cube", ycb_id="012_strawberry")
+        # self.cube = YCBObject(name="cube", ycb_id="013_apple")
+        # self.cube = YCBObject(name="cube", ycb_id="014_lemon")
+        # self.cube = YCBObject(name="cube", ycb_id="015_peach")
+        # self.cube = YCBObject(name="cube", ycb_id="016_pear")
+        # self.cube = YCBObject(name="cube", ycb_id="017_orange")
+        # self.cube = YCBObject(name="cube", ycb_id="018_plum")
+        # self.cube = YCBObject(name="cube", ycb_id="019_pitcher_base")
+        # self.cube = YCBObject(name="cube", ycb_id="021_bleach_cleanser")
+        # self.cube = YCBObject(name="cube", ycb_id="022_windex_bottle")
+        # self.cube = YCBObject(name="cube", ycb_id="024_bowl")
+        # self.cube = YCBObject(name="cube", ycb_id="025_mug")
+        # self.cube = YCBObject(name="cube", ycb_id="026_sponge")
+        # self.cube = YCBObject(name="cube", ycb_id="028_skillet_lid")
+        # self.cube = YCBObject(name="cube", ycb_id="029_plate")
+        # self.cube = YCBObject(name="cube", ycb_id="030_fork")
+        # self.cube = YCBObject(name="cube", ycb_id="031_spoon")
+        # self.cube = YCBObject(name="cube", ycb_id="032_knife")
+        # self.cube = YCBObject(name="cube", ycb_id="033_spatula")
+        # self.cube = YCBObject(name="cube", ycb_id="035_power_drill")
+        # self.cube = YCBObject(name="cube", ycb_id="036_wood_block")
+        # self.cube = YCBObject(name="cube", ycb_id="037_scissors")
+        # self.cube = YCBObject(name="cube", ycb_id="038_padlock")
+        # self.cube = YCBObject(name="cube", ycb_id="040_large_marker")
+        # self.cube = YCBObject(name="cube", ycb_id="042_adjustable_wrench")
+        # self.cube = YCBObject(name="cube", ycb_id="043_phillips_screwdriver")
+        # self.cube = YCBObject(name="cube", ycb_id="044_flat_screwdriver")
+        # self.cube = YCBObject(name="cube", ycb_id="048_hammer")
+        # self.cube = YCBObject(name="cube", ycb_id="050_medium_clamp")
+        # self.cube = YCBObject(name="cube", ycb_id="051_large_clamp")
+        # self.cube = YCBObject(name="cube", ycb_id="052_extra_large_clamp")
 
         # Create placement initializer
         if self.placement_initializer is not None:
