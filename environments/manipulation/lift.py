@@ -331,7 +331,7 @@ class Lift(SingleArmEnv):
         # self.cube = LemonObject(name="cube")
         # self.cube = MilkObject(name="cube")
         # self.cube = BreadObject(name="cube")
-        # self.cube = CerealObject(name="cube")
+        self.cube = CerealObject(name="cube")
 
         # ---- YCB objects ----
         # Requires `pip install -e /media/saks/disk8TB/ycb_assets` in the active env.
@@ -373,7 +373,7 @@ class Lift(SingleArmEnv):
         # self.cube = YCBObject(name="cube", ycb_id="043_phillips_screwdriver")
         # self.cube = YCBObject(name="cube", ycb_id="044_flat_screwdriver")
         # self.cube = YCBObject(name="cube", ycb_id="048_hammer")
-        self.cube = YCBObject(name="cube", ycb_id="050_medium_clamp")
+        # self.cube = YCBObject(name="cube", ycb_id="050_medium_clamp")
         ## self.cube = YCBObject(name="cube", ycb_id="051_large_clamp")
         ## self.cube = YCBObject(name="cube", ycb_id="052_extra_large_clamp")
 
