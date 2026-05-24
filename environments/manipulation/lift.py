@@ -333,14 +333,14 @@ class Lift(SingleArmEnv):
         # self.cube = BreadObject(name="cube")
         # self.cube = CerealObject(name="cube")
 
-        # ---- YCB objects (Google-16k mesh + coacd convex decomposition) ----
+        # ---- YCB objects ----
         # Requires `pip install -e /media/saks/disk8TB/ycb_assets` in the active env.
         # Use ycb_assets.list_ycb_objects() to see what's installed locally.
         # self.cube = YCBObject(name="cube", ycb_id="002_master_chef_can")
-        self.cube = YCBObject(name="cube", ycb_id="003_cracker_box")
+        # self.cube = YCBObject(name="cube", ycb_id="003_cracker_box")
         # self.cube = YCBObject(name="cube", ycb_id="004_sugar_box")
         # self.cube = YCBObject(name="cube", ycb_id="006_mustard_bottle")
-        # self.cube = YCBObject(name="cube", ycb_id="007_tuna_fish_can")
+        ## self.cube = YCBObject(name="cube", ycb_id="007_tuna_fish_can")
         # self.cube = YCBObject(name="cube", ycb_id="008_pudding_box")
         # self.cube = YCBObject(name="cube", ycb_id="009_gelatin_box")
         # self.cube = YCBObject(name="cube", ycb_id="010_potted_meat_can")
@@ -373,9 +373,9 @@ class Lift(SingleArmEnv):
         # self.cube = YCBObject(name="cube", ycb_id="043_phillips_screwdriver")
         # self.cube = YCBObject(name="cube", ycb_id="044_flat_screwdriver")
         # self.cube = YCBObject(name="cube", ycb_id="048_hammer")
-        # self.cube = YCBObject(name="cube", ycb_id="050_medium_clamp")
-        # self.cube = YCBObject(name="cube", ycb_id="051_large_clamp")
-        # self.cube = YCBObject(name="cube", ycb_id="052_extra_large_clamp")
+        self.cube = YCBObject(name="cube", ycb_id="050_medium_clamp")
+        ## self.cube = YCBObject(name="cube", ycb_id="051_large_clamp")
+        ## self.cube = YCBObject(name="cube", ycb_id="052_extra_large_clamp")
 
         # Create placement initializer
         if self.placement_initializer is not None:
@@ -411,6 +411,23 @@ class Lift(SingleArmEnv):
 
         # Additional object references from this env
         self.cube_body_id = self.sim.model.body_name2id(self.cube.root_body)
+
+        # If the active cube is a YCB object AND camera obs are requested,
+        # build a modern-mujoco TexturedRenderer that mirrors sim state and
+        # produces UV-textured camera frames. Gated on use_camera_obs so the
+        # AsyncVectorEnv "dummy env" path (created in the parent process with
+        # use_camera_obs=False just to introspect spaces) never imports
+        # mujoco — which would initialize EGL_DISPLAY at module load and
+        # then be inherited as a stale handle by forked workers, causing
+        # EGL_BAD_ALLOC. The renderer is plugged into the camera observables
+        # in _setup_observables() below; physics stays on mujoco_py.
+        if (YCBObject is not None
+                and isinstance(self.cube, YCBObject)
+                and getattr(self, "use_camera_obs", False)):
+            from ycb_assets import TexturedRenderer
+            h = self.camera_heights[0] if isinstance(self.camera_heights, (list, tuple)) else self.camera_heights
+            w = self.camera_widths[0] if isinstance(self.camera_widths, (list, tuple)) else self.camera_widths
+            self._ycb_textured_renderer = TexturedRenderer(self, height=h, width=w)
 
     def _setup_observables(self):
         """
@@ -451,6 +468,43 @@ class Lift(SingleArmEnv):
                     sensor=s,
                     sampling_rate=self.control_freq,
                 )
+
+        # If a YCB cube + TexturedRenderer is active, replace each camera_rgb
+        # observable's sensor with one that renders through modern mujoco
+        # (real UV textures) instead of mujoco_py (untextured STL).
+        if hasattr(self, "_ycb_textured_renderer"):
+            from robosuite.utils import macros
+            from robosuite.utils.mjcf_utils import IMAGE_CONVENTION_MAPPING
+            conv = IMAGE_CONVENTION_MAPPING[macros.IMAGE_CONVENTION]
+            renderer = self._ycb_textured_renderer
+
+            def _make_textured_sensor(cam_name):
+                # Pre-built zero-frame returned during robosuite's shape-probe
+                # (set_sensor -> _check_sensor_validity calls the sensor with
+                # obs_cache={} to learn the output shape). If we actually
+                # rendered then, we'd acquire an EGL context in this process;
+                # if this env was built in a parent that later fork()s vector
+                # workers (AsyncVectorEnv), the inherited EGL state would be
+                # corrupt in the children.
+                _shape_probe = np.zeros((renderer._h, renderer._w, 3), dtype=np.uint8)
+                @sensor(modality="image")
+                def textured_camera_rgb(obs_cache):
+                    if not obs_cache:
+                        return _shape_probe
+                    # Modern mujoco's Renderer returns top-left-origin frames;
+                    # mujoco_py returns bottom-left-origin. Flip ours to match
+                    # mujoco_py's convention so the downstream [::conv] step
+                    # behaves identically to the original camera_rgb sensor.
+                    img = renderer.render(self, camera_name=cam_name)
+                    img = np.flipud(img)
+                    return img[::conv]
+                return textured_camera_rgb
+
+            cam_names = self.camera_names if isinstance(self.camera_names, (list, tuple)) else [self.camera_names]
+            for cam_name in cam_names:
+                key = f"{cam_name}_image"
+                if key in observables:
+                    observables[key].set_sensor(_make_textured_sensor(cam_name))
 
         return observables
 
