@@ -17,15 +17,7 @@ from robosuite.models.objects import (
     BreadObject,
     CerealObject,
 )
-
-# Optional YCB integration. Only available in envs where the
-# `ycb_assets` package (at /media/saks/disk8TB/ycb_assets/) has been installed
-# via `pip install -e`. Leaves YCBObject as None otherwise so this file still
-# imports cleanly in envs without YCB.
-try:
-    from ycb_assets import YCBObject
-except ImportError:
-    YCBObject = None
+from robosuite.models.objects import YCBObject
 from robosuite.models.tasks import ManipulationTask
 from robosuite.utils.placement_samplers import UniformRandomSampler
 from robosuite.utils.observables import Observable, sensor
@@ -295,33 +287,33 @@ class Lift(SingleArmEnv):
             tex_attrib=tex_attrib,
             mat_attrib=mat_attrib,
         )
-        # self.cube = BoxObject(
-        #     name="cube",
-        #     size_min=[0.020, 0.020, 0.020],  # [0.015, 0.015, 0.015],
-        #     size_max=[0.022, 0.022, 0.022],  # [0.018, 0.018, 0.018])
-        #     rgba=[1, 0, 0, 1],
-        #     material=redwood,
-        # )
+        self.cube = BoxObject(
+            name="cube",
+            size_min=[0.020, 0.020, 0.020],  # [0.015, 0.015, 0.015],
+            size_max=[0.022, 0.022, 0.022],  # [0.018, 0.018, 0.018])
+            rgba=[1, 0, 0, 1],
+            material=redwood,
+        )
         # self.cube = CylinderObject(
-        #     name="cube",
-        #     size_min=[0.020, 0.020],   # [radius, half-height]
-        #     size_max=[0.022, 0.022],
-        #     rgba=[1, 0, 0, 1],
-        #     material=redwood,
+            # name="cube",
+            # size_min=[0.020, 0.020],   # [radius, half-height]
+            # size_max=[0.022, 0.022],
+            # rgba=[1, 0, 0, 1],
+            # material=redwood,
         # )
         # self.cube = CapsuleObject(
-        #     name="cube",
-        #     size_min=[0.020, 0.020],   # [radius, half-height]
-        #     size_max=[0.022, 0.022],
-        #     rgba=[1, 0, 0, 1],
-        #     material=redwood,
+            # name="cube",
+            # size_min=[0.020, 0.020],   # [radius, half-height]
+            # size_max=[0.022, 0.022],
+            # rgba=[1, 0, 0, 1],
+            # material=redwood,
         # )
         # self.cube = BallObject(
-        #     name="cube",
-        #     size_min=[0.020],   # [radius]
-        #     size_max=[0.022],
-        #     rgba=[1, 0, 0, 1],
-        #     material=redwood,
+            # name="cube",
+            # size_min=[0.020],   # [radius]
+            # size_max=[0.022],
+            # rgba=[1, 0, 0, 1],
+            # material=redwood,
         # )
 
         # ---- XML-based objects (mesh assets in robosuite/models/assets/objects) ----
@@ -331,7 +323,7 @@ class Lift(SingleArmEnv):
         # self.cube = LemonObject(name="cube")
         # self.cube = MilkObject(name="cube")
         # self.cube = BreadObject(name="cube")
-        self.cube = CerealObject(name="cube")
+        # self.cube = CerealObject(name="cube")
 
         # ---- YCB objects ----
         # Requires `pip install -e /media/saks/disk8TB/ycb_assets` in the active env.
@@ -421,10 +413,9 @@ class Lift(SingleArmEnv):
         # then be inherited as a stale handle by forked workers, causing
         # EGL_BAD_ALLOC. The renderer is plugged into the camera observables
         # in _setup_observables() below; physics stays on mujoco_py.
-        if (YCBObject is not None
-                and isinstance(self.cube, YCBObject)
+        if (isinstance(self.cube, YCBObject)
                 and getattr(self, "use_camera_obs", False)):
-            from ycb_assets import TexturedRenderer
+            from robosuite.utils.ycb_textured_renderer import TexturedRenderer
             h = self.camera_heights[0] if isinstance(self.camera_heights, (list, tuple)) else self.camera_heights
             w = self.camera_widths[0] if isinstance(self.camera_widths, (list, tuple)) else self.camera_widths
             self._ycb_textured_renderer = TexturedRenderer(self, height=h, width=w)
