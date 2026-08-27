@@ -1,4 +1,4 @@
-# robosuite (local fork)
+# robosuite YCB
 
 ## Setup
 
