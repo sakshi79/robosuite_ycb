@@ -1,7 +1,11 @@
 # YCB raw mesh cache: downloaded on demand by robosuite.utils.ycb_download,
 # not shipped in the repo (pre-generated xml/ and processed/ are shipped).
-models/assets/objects/ycb/raw/*
-!models/assets/objects/ycb/raw/.gitkeep
+robosuite/models/assets/objects/ycb/raw/*
+!robosuite/models/assets/objects/ycb/raw/.gitkeep
 
 __pycache__/
 *.pyc
+
+# packaging artifacts
+.venv/
+*.egg-info/
