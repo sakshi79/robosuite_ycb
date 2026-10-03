@@ -23,6 +23,149 @@ from robosuite.utils.placement_samplers import UniformRandomSampler
 from robosuite.utils.observables import Observable, sensor
 
 
+# Primitive objects: class + [size_min, size_max] (size semantics depend on the class)
+PRIMITIVE_OBJECTS = {
+    "box": (BoxObject, [0.020, 0.020, 0.020], [0.022, 0.022, 0.022]),        # half-extents
+    "cylinder": (CylinderObject, [0.020, 0.020], [0.022, 0.022]),            # [radius, half-height]
+    "capsule": (CapsuleObject, [0.020, 0.020], [0.022, 0.022]),              # [radius, half-height]
+    "ball": (BallObject, [0.020], [0.022]),                                  # [radius]
+}
+
+# XML-based objects (mesh assets in robosuite/models/assets/objects).
+# These do not accept size/rgba/material — geometry and textures come from the XML file.
+XML_OBJECTS = {
+    "bottle": BottleObject,
+    "can": CanObject,
+    "lemon": LemonObject,
+    "milk": MilkObject,
+    "bread": BreadObject,
+    "cereal": CerealObject,
+}
+
+
+# YCB objects (robosuite/models/assets/objects/ycb). Only ids whose meshes load cleanly are enabled;
+# the commented-out ids have XML wrappers but fail to load.
+YCB_OBJECTS = (
+    "002_master_chef_can",
+    "003_cracker_box",
+    "004_sugar_box",
+    # "005_tomato_soup_can",
+    "006_mustard_bottle",
+    # "007_tuna_fish_can",
+    "008_pudding_box",
+    "009_gelatin_box",
+    "010_potted_meat_can",
+    "011_banana",
+    "012_strawberry",
+    "013_apple",
+    "014_lemon",
+    "015_peach",
+    "016_pear",
+    "017_orange",
+    "018_plum",
+    "019_pitcher_base",
+    "021_bleach_cleanser",
+    "022_windex_bottle",
+    "024_bowl",
+    "025_mug",
+    "026_sponge",
+    "028_skillet_lid",
+    "029_plate",
+    "030_fork",
+    "031_spoon",
+    "032_knife",
+    "033_spatula",
+    "035_power_drill",
+    "036_wood_block",
+    "037_scissors",
+    "038_padlock",
+    "040_large_marker",
+    "042_adjustable_wrench",
+    "043_phillips_screwdriver",
+    "044_flat_screwdriver",
+    "048_hammer",
+    "050_medium_clamp",
+    # "051_large_clamp",
+    # "052_extra_large_clamp",
+    # "053_mini_soccer_ball",
+    # "054_softball",
+    # "055_baseball",
+    # "056_tennis_ball",
+    # "057_racquetball",
+    # "058_golf_ball",
+    # "059_chain",
+    # "061_foam_brick",
+    # "062_dice",
+    # "063-a_marbles",
+    # "063-b_marbles",
+    # "065-a_cups",
+    # "065-b_cups",
+    # "065-c_cups",
+    # "065-d_cups",
+    # "065-e_cups",
+    # "065-f_cups",
+    # "065-g_cups",
+    # "065-h_cups",
+    # "065-i_cups",
+    # "065-j_cups",
+    # "070-a_colored_wood_blocks",
+    # "070-b_colored_wood_blocks",
+    # "071_nine_hole_peg_test",
+    # "072-a_toy_airplane",
+    # "072-b_toy_airplane",
+    # "072-c_toy_airplane",
+    # "072-d_toy_airplane",
+    # "072-e_toy_airplane",
+    # "073-a_lego_duplo",
+    # "073-b_lego_duplo",
+    # "073-c_lego_duplo",
+    # "073-d_lego_duplo",
+    # "073-e_lego_duplo",
+    # "073-f_lego_duplo",
+    # "073-g_lego_duplo",
+    # "077_rubiks_cube",
+)
+
+
+def make_lift_object(name, object_type):
+    """
+    Builds the object to be lifted.
+
+    Args:
+        name (str): Name of the object in the env's scope
+        object_type (str): One of the keys in PRIMITIVE_OBJECTS or XML_OBJECTS, or a YCB id given either as
+            "ycb:<ycb_id>" or bare (e.g. "ycb:011_banana" or "011_banana"). Must be in YCB_OBJECTS.
+
+    Returns:
+        MujocoObject: the instantiated object
+
+    Raises:
+        ValueError: [Unknown object type]
+    """
+    if object_type in PRIMITIVE_OBJECTS:
+        cls, size_min, size_max = PRIMITIVE_OBJECTS[object_type]
+        redwood = CustomMaterial(
+            texture="WoodRed",
+            tex_name="redwood",
+            mat_name="redwood_mat",
+            tex_attrib={"type": "cube"},
+            mat_attrib={"texrepeat": "1 1", "specular": "0.4", "shininess": "0.1"},
+        )
+        return cls(name=name, size_min=size_min, size_max=size_max, rgba=[1, 0, 0, 1], material=redwood)
+
+    if object_type in XML_OBJECTS:
+        return XML_OBJECTS[object_type](name=name)
+
+    ycb_id = object_type[len("ycb:"):] if object_type.startswith("ycb:") else object_type
+    if ycb_id in YCB_OBJECTS:
+        return YCBObject(name=name, ycb_id=ycb_id)
+
+    raise ValueError(
+        f"Unknown object_type {object_type!r}. Expected one of {sorted(PRIMITIVE_OBJECTS)}, "
+        f"{sorted(XML_OBJECTS)}, or a YCB id from YCB_OBJECTS (optionally prefixed with 'ycb:')."
+    )
+
+
 class Lift(SingleArmEnv):
     """
     This class corresponds to the lifting task for a single robot arm.
@@ -128,6 +271,10 @@ class Lift(SingleArmEnv):
             bool if same depth setting is to be used for all cameras or else it should be a list of the same length as
             "camera names" param.
 
+        object_type (str): Which object to lift. A primitive ("box", "cylinder", "capsule", "ball"), an XML
+            object ("bottle", "can", "lemon", "milk", "bread", "cereal"), or a YCB id such as "011_banana"
+            (optionally written "ycb:011_banana"). See make_lift_object().
+
     Raises:
         AssertionError: [Invalid number of robots specified]
     """
@@ -160,7 +307,11 @@ class Lift(SingleArmEnv):
         camera_heights=256,
         camera_widths=256,
         camera_depths=False,
+        object_type="box",
     ):
+        # which object to lift
+        self.object_type = object_type
+
         # settings for table top
         self.table_full_size = table_full_size
         self.table_friction = table_friction
@@ -272,102 +423,7 @@ class Lift(SingleArmEnv):
         mujoco_arena.set_origin([0, 0, 0])
 
         # initialize objects of interest
-        tex_attrib = {
-            "type": "cube",
-        }
-        mat_attrib = {
-            "texrepeat": "1 1",
-            "specular": "0.4",
-            "shininess": "0.1",
-        }
-        redwood = CustomMaterial(
-            texture="WoodRed",
-            tex_name="redwood",
-            mat_name="redwood_mat",
-            tex_attrib=tex_attrib,
-            mat_attrib=mat_attrib,
-        )
-        self.cube = BoxObject(
-            name="cube",
-            size_min=[0.020, 0.020, 0.020],  # [0.015, 0.015, 0.015],
-            size_max=[0.022, 0.022, 0.022],  # [0.018, 0.018, 0.018])
-            rgba=[1, 0, 0, 1],
-            material=redwood,
-        )
-        # self.cube = CylinderObject(
-            # name="cube",
-            # size_min=[0.020, 0.020],   # [radius, half-height]
-            # size_max=[0.022, 0.022],
-            # rgba=[1, 0, 0, 1],
-            # material=redwood,
-        # )
-        # self.cube = CapsuleObject(
-            # name="cube",
-            # size_min=[0.020, 0.020],   # [radius, half-height]
-            # size_max=[0.022, 0.022],
-            # rgba=[1, 0, 0, 1],
-            # material=redwood,
-        # )
-        # self.cube = BallObject(
-        #     name="cube",
-        #     size_min=[0.020],   # [radius]
-        #     size_max=[0.022],
-        #     rgba=[1, 0, 0, 1],
-        #     material=redwood,
-        # )
-
-        # ---- XML-based objects (mesh assets in robosuite/models/assets/objects) ----
-        # XML objects do not accept size/rgba/material — geometry and textures come from the XML file.
-        # self.cube = BottleObject(name="cube")
-        # self.cube = CanObject(name="cube")
-        # self.cube = LemonObject(name="cube")
-        # self.cube = MilkObject(name="cube")
-        # self.cube = BreadObject(name="cube")
-        # self.cube = CerealObject(name="cube")
-
-        # ---- YCB objects ----
-        # Requires `pip install -e /media/saks/disk8TB/ycb_assets` in the active env.
-        # Use ycb_assets.list_ycb_objects() to see what's installed locally.
-        # self.cube = YCBObject(name="cube", ycb_id="002_master_chef_can")
-        # self.cube = YCBObject(name="cube", ycb_id="003_cracker_box")
-        # self.cube = YCBObject(name="cube", ycb_id="004_sugar_box")
-        # self.cube = YCBObject(name="cube", ycb_id="006_mustard_bottle")
-        ## self.cube = YCBObject(name="cube", ycb_id="007_tuna_fish_can")
-        # self.cube = YCBObject(name="cube", ycb_id="008_pudding_box")
-        # self.cube = YCBObject(name="cube", ycb_id="009_gelatin_box")
-        # self.cube = YCBObject(name="cube", ycb_id="010_potted_meat_can")
-        # self.cube = YCBObject(name="cube", ycb_id="011_banana")
-        # self.cube = YCBObject(name="cube", ycb_id="012_strawberry")
-        # self.cube = YCBObject(name="cube", ycb_id="013_apple")
-        # self.cube = YCBObject(name="cube", ycb_id="014_lemon")
-        # self.cube = YCBObject(name="cube", ycb_id="015_peach")
-        # self.cube = YCBObject(name="cube", ycb_id="016_pear")
-        # self.cube = YCBObject(name="cube", ycb_id="017_orange")
-        # self.cube = YCBObject(name="cube", ycb_id="018_plum")
-        # self.cube = YCBObject(name="cube", ycb_id="019_pitcher_base")
-        # self.cube = YCBObject(name="cube", ycb_id="021_bleach_cleanser")
-        # self.cube = YCBObject(name="cube", ycb_id="022_windex_bottle")
-        # self.cube = YCBObject(name="cube", ycb_id="024_bowl")
-        # self.cube = YCBObject(name="cube", ycb_id="025_mug")
-        # self.cube = YCBObject(name="cube", ycb_id="026_sponge")
-        # self.cube = YCBObject(name="cube", ycb_id="028_skillet_lid")
-        # self.cube = YCBObject(name="cube", ycb_id="029_plate")
-        # self.cube = YCBObject(name="cube", ycb_id="030_fork")
-        # self.cube = YCBObject(name="cube", ycb_id="031_spoon")
-        # self.cube = YCBObject(name="cube", ycb_id="032_knife")
-        # self.cube = YCBObject(name="cube", ycb_id="033_spatula")
-        # self.cube = YCBObject(name="cube", ycb_id="035_power_drill")
-        # self.cube = YCBObject(name="cube", ycb_id="036_wood_block")
-        # self.cube = YCBObject(name="cube", ycb_id="037_scissors")
-        # self.cube = YCBObject(name="cube", ycb_id="038_padlock")
-        # self.cube = YCBObject(name="cube", ycb_id="040_large_marker")
-        # self.cube = YCBObject(name="cube", ycb_id="042_adjustable_wrench")
-        # self.cube = YCBObject(name="cube", ycb_id="043_phillips_screwdriver")
-        # self.cube = YCBObject(name="cube", ycb_id="044_flat_screwdriver")
-        # self.cube = YCBObject(name="cube", ycb_id="048_hammer")
-        # self.cube = YCBObject(name="cube", ycb_id="050_medium_clamp")
-        ## self.cube = YCBObject(name="cube", ycb_id="051_large_clamp")
-        ## self.cube = YCBObject(name="cube", ycb_id="052_extra_large_clamp")
+        self.cube = make_lift_object(name="cube", object_type=self.object_type)
 
         # Create placement initializer
         if self.placement_initializer is not None:

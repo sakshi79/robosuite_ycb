@@ -15,8 +15,7 @@ setup(
         "numba>=0.52.0,<=0.53.1",
         "scipy>=1.2.3",
         "free-mujoco-py==2.1.6",
-        # YCB textured renderer (utils/ycb_textured_renderer.py); last cp39 wheels
-        "mujoco==3.3.7",
+        "mujoco==3.3.7",   # required by YCB textured renderer in utils
         "Pillow",
         "h5py",
     ],
