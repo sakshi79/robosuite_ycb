@@ -4,14 +4,11 @@ from os import path
 
 this_directory = path.abspath(path.dirname(__file__))
 with open(path.join(this_directory, "README.md"), encoding="utf-8") as f:
-    lines = f.readlines()
+    long_description = f.read()
 
-# remove images from README
-lines = [x for x in lines if ".png" not in x]
-long_description = "".join(lines)
 
 setup(
-    name="robosuite",
+    name="robosuite_ycb",
     packages=[package for package in find_packages() if package.startswith("robosuite")],
     install_requires=[
         "numpy>=1.20.0,<1.24",
