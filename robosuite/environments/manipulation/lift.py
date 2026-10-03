@@ -309,11 +309,11 @@ class Lift(SingleArmEnv):
             # material=redwood,
         # )
         # self.cube = BallObject(
-            # name="cube",
-            # size_min=[0.020],   # [radius]
-            # size_max=[0.022],
-            # rgba=[1, 0, 0, 1],
-            # material=redwood,
+        #     name="cube",
+        #     size_min=[0.020],   # [radius]
+        #     size_max=[0.022],
+        #     rgba=[1, 0, 0, 1],
+        #     material=redwood,
         # )
 
         # ---- XML-based objects (mesh assets in robosuite/models/assets/objects) ----
