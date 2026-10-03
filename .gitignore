@@ -3,5 +3,28 @@
 models/assets/objects/ycb/raw/*
 !models/assets/objects/ycb/raw/.gitkeep
 
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*.so
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Run outputs
+*.log
+wandb/
+outputs/
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Claude Code local state
+.claude/
